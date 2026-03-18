@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -171,6 +173,36 @@ public class FtpHelper {
         try (RemoteOperations ops = connect(conn)) {
             return ops.getFolderInfo(remotePath);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Folder watching
+    // -------------------------------------------------------------------------
+
+    /**
+     * Starts polling {@code remotePath} at the given interval and invokes {@code listener}
+     * for each detected addition, deletion, or modification.
+     *
+     * <p>The first poll establishes a baseline — no events are fired until the second poll.
+     * Call {@link FolderWatcher#close()} (or use try-with-resources) to stop watching.</p>
+     *
+     * <pre>
+     * try (FolderWatcher watcher = FtpHelper.watchFolder(conn, "/remote/path", 10, TimeUnit.SECONDS, event -> {
+     *     System.out.println(event.getType() + " " + event.getFile().getName());
+     * })) {
+     *     Thread.sleep(60_000);
+     * }
+     * </pre>
+     *
+     * @param interval how often to poll the remote folder
+     * @param unit     time unit for {@code interval}
+     * @param listener called on the watcher thread for each change event
+     * @return a {@link FolderWatcher} that must be closed to stop background polling
+     */
+    public static FolderWatcher watchFolder(ConnectionDetails conn, String remotePath,
+                                            long interval, TimeUnit unit,
+                                            Consumer<FolderChangeEvent> listener) {
+        return new FolderWatcher(conn, remotePath, interval, unit, listener);
     }
 
     // -------------------------------------------------------------------------

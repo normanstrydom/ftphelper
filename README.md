@@ -110,6 +110,25 @@ FolderInfo info = FtpHelper.getFolderInfo(conn, "/remote/reports");
 System.out.println(info.getLastModified());
 ```
 
+### watchFolder
+
+Polls a remote folder at a fixed interval and fires a callback for every addition, deletion, or modification. Returns a `FolderWatcher` that must be closed to stop background polling.
+
+```java
+try (FolderWatcher watcher = FtpHelper.watchFolder(
+        conn,
+        "/remote/inbox",
+        10, TimeUnit.SECONDS,
+        event -> System.out.println(event.getType() + " " + event.getFile().getName())
+)) {
+    Thread.sleep(300_000); // watch for 5 minutes
+}
+```
+
+`FolderChangeEvent` fields: `getType()` (`ADDED`, `DELETED`, or `MODIFIED`), `getFile()` (`FileInfo` — for `DELETED` events this reflects the last known state).
+
+The first poll silently establishes a baseline; events begin firing from the second poll onward. Transient connection errors are swallowed and retried on the next tick.
+
 ## Project structure
 
 ```
@@ -121,6 +140,9 @@ ftphelper/
     ├── Protocol.java           # Enum: FTP | SFTP
     ├── FileInfo.java           # File metadata
     ├── FolderInfo.java         # Folder metadata
+    ├── FolderChangeType.java   # Enum: ADDED | DELETED | MODIFIED
+    ├── FolderChangeEvent.java  # Change event payload
+    ├── FolderWatcher.java      # Background polling watcher
     ├── FtpHelperException.java # Unchecked wrapper exception
     ├── RemoteOperations.java   # Internal interface (package-private)
     ├── FtpOperations.java      # FTP implementation (package-private)
