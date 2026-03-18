@@ -13,15 +13,21 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * FTP implementation using Apache Commons Net. Package-private.
  */
 class FtpOperations implements RemoteOperations {
 
+    private static final Logger log = Logger.getLogger(FtpOperations.class.getName());
+
     private final FTPClient client;
+    private final String host;
 
     FtpOperations(ConnectionDetails conn) throws IOException {
+        this.host = conn.getHost() + ":" + conn.getPort();
+        log.fine(() -> "FTP connecting to " + host);
         client = new FTPClient();
         client.connect(conn.getHost(), conn.getPort());
         int reply = client.getReplyCode();
@@ -35,33 +41,42 @@ class FtpOperations implements RemoteOperations {
         }
         client.enterLocalPassiveMode();
         client.setFileType(FTP.BINARY_FILE_TYPE);
+        log.fine(() -> "FTP connected and logged in as " + conn.getUsername() + " @ " + host);
     }
 
     @Override
     public void writeFile(String remotePath, InputStream data) throws IOException {
+        log.fine(() -> "writeFile " + remotePath);
         if (!client.storeFile(remotePath, data)) {
             throw new IOException("Failed to write file: " + remotePath + " — " + client.getReplyString().trim());
         }
+        log.fine(() -> "writeFile complete: " + remotePath);
     }
 
     @Override
     public InputStream readFile(String remotePath) throws IOException {
+        log.fine(() -> "readFile " + remotePath);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         if (!client.retrieveFile(remotePath, baos)) {
             throw new IOException("Failed to read file: " + remotePath + " — " + client.getReplyString().trim());
         }
+        int size = baos.size();
+        log.finer(() -> "readFile complete: " + remotePath + " (" + size + " bytes)");
         return new ByteArrayInputStream(baos.toByteArray());
     }
 
     @Override
     public void deleteFile(String remotePath) throws IOException {
+        log.fine(() -> "deleteFile " + remotePath);
         if (!client.deleteFile(remotePath)) {
             throw new IOException("Failed to delete file: " + remotePath + " — " + client.getReplyString().trim());
         }
+        log.fine(() -> "deleteFile complete: " + remotePath);
     }
 
     @Override
     public void deleteFolder(String remotePath, boolean includeContents) throws IOException {
+        log.fine(() -> "deleteFolder " + remotePath + " includeContents=" + includeContents);
         if (includeContents) {
             deleteFolderRecursive(remotePath);
         } else {
@@ -69,9 +84,11 @@ class FtpOperations implements RemoteOperations {
                 throw new IOException("Failed to delete folder: " + remotePath + " — " + client.getReplyString().trim());
             }
         }
+        log.fine(() -> "deleteFolder complete: " + remotePath);
     }
 
     private void deleteFolderRecursive(String path) throws IOException {
+        log.finer(() -> "deleteFolderRecursive listing " + path);
         FTPFile[] files = client.listFiles(path);
         if (files != null) {
             for (FTPFile file : files) {
@@ -81,44 +98,55 @@ class FtpOperations implements RemoteOperations {
                 if (file.isDirectory()) {
                     deleteFolderRecursive(fullPath);
                 } else {
+                    log.finer(() -> "deleteFolderRecursive deleting file " + fullPath);
                     client.deleteFile(fullPath);
                 }
             }
         }
+        log.finer(() -> "deleteFolderRecursive removing directory " + path);
         client.removeDirectory(path);
     }
 
     @Override
     public List<FileInfo> listFiles(String remotePath) throws IOException {
+        log.fine(() -> "listFiles " + remotePath);
         FTPFile[] files = client.listFiles(remotePath);
         List<FileInfo> result = new ArrayList<>();
         if (files != null) {
             for (FTPFile file : files) {
                 if (file.isFile()) {
-                    result.add(toFileInfo(remotePath, file));
+                    FileInfo info = toFileInfo(remotePath, file);
+                    log.finer(() -> "listFiles entry: " + info);
+                    result.add(info);
                 }
             }
         }
+        log.fine(() -> "listFiles " + remotePath + " -> " + result.size() + " file(s)");
         return result;
     }
 
     @Override
     public List<FolderInfo> listFolders(String remotePath) throws IOException {
+        log.fine(() -> "listFolders " + remotePath);
         FTPFile[] files = client.listFiles(remotePath);
         List<FolderInfo> result = new ArrayList<>();
         if (files != null) {
             for (FTPFile file : files) {
                 String name = file.getName();
                 if (file.isDirectory() && !".".equals(name) && !"..".equals(name)) {
-                    result.add(toFolderInfo(remotePath, file));
+                    FolderInfo info = toFolderInfo(remotePath, file);
+                    log.finer(() -> "listFolders entry: " + info);
+                    result.add(info);
                 }
             }
         }
+        log.fine(() -> "listFolders " + remotePath + " -> " + result.size() + " folder(s)");
         return result;
     }
 
     @Override
     public FileInfo getFileInfo(String remotePath) throws IOException {
+        log.fine(() -> "getFileInfo " + remotePath);
         int lastSlash = remotePath.lastIndexOf('/');
         String parent = lastSlash > 0 ? remotePath.substring(0, lastSlash) : "/";
         String name   = remotePath.substring(lastSlash + 1);
@@ -126,7 +154,9 @@ class FtpOperations implements RemoteOperations {
         if (files != null) {
             for (FTPFile file : files) {
                 if (file.isFile() && name.equals(file.getName())) {
-                    return toFileInfo(parent, file);
+                    FileInfo info = toFileInfo(parent, file);
+                    log.finer(() -> "getFileInfo result: " + info);
+                    return info;
                 }
             }
         }
@@ -135,6 +165,7 @@ class FtpOperations implements RemoteOperations {
 
     @Override
     public FolderInfo getFolderInfo(String remotePath) throws IOException {
+        log.fine(() -> "getFolderInfo " + remotePath);
         int lastSlash = remotePath.lastIndexOf('/');
         String parent = lastSlash > 0 ? remotePath.substring(0, lastSlash) : "/";
         String name   = remotePath.substring(lastSlash + 1);
@@ -142,7 +173,9 @@ class FtpOperations implements RemoteOperations {
         if (files != null) {
             for (FTPFile file : files) {
                 if (file.isDirectory() && name.equals(file.getName())) {
-                    return toFolderInfo(parent, file);
+                    FolderInfo info = toFolderInfo(parent, file);
+                    log.finer(() -> "getFolderInfo result: " + info);
+                    return info;
                 }
             }
         }
@@ -169,6 +202,7 @@ class FtpOperations implements RemoteOperations {
 
     @Override
     public void close() throws IOException {
+        log.fine(() -> "FTP closing connection to " + host);
         if (client.isConnected()) {
             try {
                 client.logout();
@@ -176,5 +210,6 @@ class FtpOperations implements RemoteOperations {
                 client.disconnect();
             }
         }
+        log.finer(() -> "FTP connection closed: " + host);
     }
 }

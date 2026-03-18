@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 /**
  * Polls a remote folder at a fixed interval and fires {@link FolderChangeEvent}s
@@ -27,6 +28,8 @@ import java.util.function.Consumer;
  */
 public class FolderWatcher implements Closeable {
 
+    private static final Logger log = Logger.getLogger(FolderWatcher.class.getName());
+
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "ftphelper-folder-watcher");
         t.setDaemon(true);
@@ -41,8 +44,11 @@ public class FolderWatcher implements Closeable {
         Map<String, FileInfo> snapshot = new HashMap<>();
         boolean[] initialized = {false};
 
+        log.fine(() -> "FolderWatcher starting: " + remotePath + " every " + interval + " " + unit);
+
         scheduler.scheduleAtFixedRate(() -> {
             try {
+                log.finer(() -> "FolderWatcher poll tick: " + remotePath);
                 List<FileInfo> current = FtpHelper.listFiles(conn, remotePath);
                 Map<String, FileInfo> currentMap = new HashMap<>();
                 for (FileInfo f : current) {
@@ -51,6 +57,7 @@ public class FolderWatcher implements Closeable {
 
                 if (!initialized[0]) {
                     // First poll: establish the baseline without firing events.
+                    log.fine(() -> "FolderWatcher baseline established: " + currentMap.size() + " file(s) in " + remotePath);
                     snapshot.putAll(currentMap);
                     initialized[0] = true;
                     return;
@@ -60,8 +67,10 @@ public class FolderWatcher implements Closeable {
                 for (Map.Entry<String, FileInfo> entry : currentMap.entrySet()) {
                     FileInfo previous = snapshot.get(entry.getKey());
                     if (previous == null) {
+                        log.fine(() -> "FolderWatcher ADDED: " + entry.getKey());
                         listener.accept(new FolderChangeEvent(FolderChangeType.ADDED, entry.getValue()));
                     } else if (isModified(previous, entry.getValue())) {
+                        log.fine(() -> "FolderWatcher MODIFIED: " + entry.getKey());
                         listener.accept(new FolderChangeEvent(FolderChangeType.MODIFIED, entry.getValue()));
                     }
                 }
@@ -69,6 +78,7 @@ public class FolderWatcher implements Closeable {
                 // Detect deletions.
                 for (Map.Entry<String, FileInfo> entry : snapshot.entrySet()) {
                     if (!currentMap.containsKey(entry.getKey())) {
+                        log.fine(() -> "FolderWatcher DELETED: " + entry.getKey());
                         listener.accept(new FolderChangeEvent(FolderChangeType.DELETED, entry.getValue()));
                     }
                 }
@@ -77,7 +87,7 @@ public class FolderWatcher implements Closeable {
                 snapshot.putAll(currentMap);
 
             } catch (IOException e) {
-                // Swallow and retry on next tick; callers can log via the listener if desired.
+                log.warning(() -> "FolderWatcher poll error for " + remotePath + ": " + e.getMessage());
             }
         }, 0, interval, unit);
     }
@@ -94,6 +104,7 @@ public class FolderWatcher implements Closeable {
      */
     @Override
     public void close() {
+        log.fine(() -> "FolderWatcher stopping");
         scheduler.shutdown();
         try {
             if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -103,5 +114,6 @@ public class FolderWatcher implements Closeable {
             scheduler.shutdownNow();
             Thread.currentThread().interrupt();
         }
+        log.finer(() -> "FolderWatcher stopped");
     }
 }
