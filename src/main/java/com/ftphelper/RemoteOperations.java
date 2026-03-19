@@ -17,7 +17,15 @@ interface RemoteOperations extends Closeable {
 
     void deleteFile(String remotePath) throws IOException;
 
+    void renameFile(String remotePath, String newPath) throws IOException;
+
+    void moveFile(String remotePath, String destinationPath) throws IOException;
+
     void deleteFolder(String remotePath, boolean includeContents) throws IOException;
+
+    void renameFolder(String remotePath, String newPath) throws IOException;
+
+    void moveFolder(String remotePath, String destinationPath) throws IOException;
 
     List<FileInfo> listFiles(String remotePath) throws IOException;
 

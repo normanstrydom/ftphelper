@@ -87,6 +87,17 @@ class SftpOperations implements RemoteOperations {
     }
 
     @Override
+    public void renameFile(String remotePath, String newPath) throws IOException {
+        log.fine(() -> "renameFile " + remotePath + " -> " + newPath);
+        try {
+            channel.rename(remotePath, newPath);
+        } catch (SftpException e) {
+            throw new IOException("Failed to rename file: " + remotePath + " -> " + newPath, e);
+        }
+        log.fine(() -> "renameFile complete: " + remotePath + " -> " + newPath);
+    }
+
+    @Override
     public void deleteFolder(String remotePath, boolean includeContents) throws IOException {
         log.fine(() -> "deleteFolder " + remotePath + " includeContents=" + includeContents);
         try {
@@ -99,6 +110,39 @@ class SftpOperations implements RemoteOperations {
             throw new IOException("Failed to delete folder: " + remotePath, e);
         }
         log.fine(() -> "deleteFolder complete: " + remotePath);
+    }
+
+    @Override
+    public void moveFile(String remotePath, String destinationPath) throws IOException {
+        log.fine(() -> "moveFile " + remotePath + " -> " + destinationPath);
+        try {
+            channel.rename(remotePath, destinationPath);
+        } catch (SftpException e) {
+            throw new IOException("Failed to move file: " + remotePath + " -> " + destinationPath, e);
+        }
+        log.fine(() -> "moveFile complete: " + remotePath + " -> " + destinationPath);
+    }
+
+    @Override
+    public void renameFolder(String remotePath, String newPath) throws IOException {
+        log.fine(() -> "renameFolder " + remotePath + " -> " + newPath);
+        try {
+            channel.rename(remotePath, newPath);
+        } catch (SftpException e) {
+            throw new IOException("Failed to rename folder: " + remotePath + " -> " + newPath, e);
+        }
+        log.fine(() -> "renameFolder complete: " + remotePath + " -> " + newPath);
+    }
+
+    @Override
+    public void moveFolder(String remotePath, String destinationPath) throws IOException {
+        log.fine(() -> "moveFolder " + remotePath + " -> " + destinationPath);
+        try {
+            channel.rename(remotePath, destinationPath);
+        } catch (SftpException e) {
+            throw new IOException("Failed to move folder: " + remotePath + " -> " + destinationPath, e);
+        }
+        log.fine(() -> "moveFolder complete: " + remotePath + " -> " + destinationPath);
     }
 
     private void deleteFolderRecursive(String path) throws SftpException {

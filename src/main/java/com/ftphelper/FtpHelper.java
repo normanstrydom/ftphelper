@@ -65,6 +65,27 @@ public class FtpHelper {
         }
     }
 
+    /**
+     * Renames (or moves) a file from {@code remotePath} to {@code newPath}.
+     */
+    public static void renameFile(ConnectionDetails conn, String remotePath, String newPath)
+            throws IOException {
+        try (RemoteOperations ops = connect(conn)) {
+            ops.renameFile(remotePath, newPath);
+        }
+    }
+
+    /**
+     * Moves a file from {@code remotePath} to {@code destinationPath}.
+     * The destination may be in a different directory.
+     */
+    public static void moveFile(ConnectionDetails conn, String remotePath, String destinationPath)
+            throws IOException {
+        try (RemoteOperations ops = connect(conn)) {
+            ops.moveFile(remotePath, destinationPath);
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Folder operations
     // -------------------------------------------------------------------------
@@ -80,6 +101,27 @@ public class FtpHelper {
             throws IOException {
         try (RemoteOperations ops = connect(conn)) {
             ops.deleteFolder(remotePath, includeContents);
+        }
+    }
+
+    /**
+     * Renames (or moves) a folder from {@code remotePath} to {@code newPath}.
+     */
+    public static void renameFolder(ConnectionDetails conn, String remotePath, String newPath)
+            throws IOException {
+        try (RemoteOperations ops = connect(conn)) {
+            ops.renameFolder(remotePath, newPath);
+        }
+    }
+
+    /**
+     * Moves a folder from {@code remotePath} to {@code destinationPath}.
+     * The destination may be under a different parent directory.
+     */
+    public static void moveFolder(ConnectionDetails conn, String remotePath, String destinationPath)
+            throws IOException {
+        try (RemoteOperations ops = connect(conn)) {
+            ops.moveFolder(remotePath, destinationPath);
         }
     }
 

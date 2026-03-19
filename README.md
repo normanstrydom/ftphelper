@@ -57,6 +57,22 @@ InputStream data = FtpHelper.readFile(conn, "/remote/dir/report.csv");
 FtpHelper.deleteFile(conn, "/remote/dir/old-report.csv");
 ```
 
+### renameFile
+
+Renames a file within the same directory.
+
+```java
+FtpHelper.renameFile(conn, "/remote/dir/old-name.csv", "/remote/dir/new-name.csv");
+```
+
+### moveFile
+
+Moves a file to a different directory.
+
+```java
+FtpHelper.moveFile(conn, "/remote/inbox/report.csv", "/remote/archive/report.csv");
+```
+
 ### deleteFolder
 
 ```java
@@ -65,6 +81,22 @@ FtpHelper.deleteFolder(conn, "/remote/archive", false);
 
 // Delete a folder and all its contents recursively
 FtpHelper.deleteFolder(conn, "/remote/archive", true);
+```
+
+### renameFolder
+
+Renames a folder within the same parent directory.
+
+```java
+FtpHelper.renameFolder(conn, "/remote/old-name", "/remote/new-name");
+```
+
+### moveFolder
+
+Moves a folder to a different parent directory.
+
+```java
+FtpHelper.moveFolder(conn, "/remote/inbox/2023", "/remote/archive/2023");
 ```
 
 ### listFiles

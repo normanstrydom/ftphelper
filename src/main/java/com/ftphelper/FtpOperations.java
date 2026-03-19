@@ -75,6 +75,15 @@ class FtpOperations implements RemoteOperations {
     }
 
     @Override
+    public void renameFile(String remotePath, String newPath) throws IOException {
+        log.fine(() -> "renameFile " + remotePath + " -> " + newPath);
+        if (!client.rename(remotePath, newPath)) {
+            throw new IOException("Failed to rename file: " + remotePath + " -> " + newPath + " — " + client.getReplyString().trim());
+        }
+        log.fine(() -> "renameFile complete: " + remotePath + " -> " + newPath);
+    }
+
+    @Override
     public void deleteFolder(String remotePath, boolean includeContents) throws IOException {
         log.fine(() -> "deleteFolder " + remotePath + " includeContents=" + includeContents);
         if (includeContents) {
@@ -85,6 +94,33 @@ class FtpOperations implements RemoteOperations {
             }
         }
         log.fine(() -> "deleteFolder complete: " + remotePath);
+    }
+
+    @Override
+    public void moveFile(String remotePath, String destinationPath) throws IOException {
+        log.fine(() -> "moveFile " + remotePath + " -> " + destinationPath);
+        if (!client.rename(remotePath, destinationPath)) {
+            throw new IOException("Failed to move file: " + remotePath + " -> " + destinationPath + " — " + client.getReplyString().trim());
+        }
+        log.fine(() -> "moveFile complete: " + remotePath + " -> " + destinationPath);
+    }
+
+    @Override
+    public void renameFolder(String remotePath, String newPath) throws IOException {
+        log.fine(() -> "renameFolder " + remotePath + " -> " + newPath);
+        if (!client.rename(remotePath, newPath)) {
+            throw new IOException("Failed to rename folder: " + remotePath + " -> " + newPath + " — " + client.getReplyString().trim());
+        }
+        log.fine(() -> "renameFolder complete: " + remotePath + " -> " + newPath);
+    }
+
+    @Override
+    public void moveFolder(String remotePath, String destinationPath) throws IOException {
+        log.fine(() -> "moveFolder " + remotePath + " -> " + destinationPath);
+        if (!client.rename(remotePath, destinationPath)) {
+            throw new IOException("Failed to move folder: " + remotePath + " -> " + destinationPath + " — " + client.getReplyString().trim());
+        }
+        log.fine(() -> "moveFolder complete: " + remotePath + " -> " + destinationPath);
     }
 
     private void deleteFolderRecursive(String path) throws IOException {
